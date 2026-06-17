@@ -7,8 +7,6 @@
 > **Scenario:** Layered network defense engagement for a mid-sized financial services firm
 > 
 > **Status:** Complete
-> 
-> **Live Write-up:** [View Project](https://oziomainya.github.io/network-defense)
 
 ---
 
@@ -102,7 +100,7 @@ Six correlation rules deployed:
 | CR-05 | New Admin Account | Event ID 4720 + Domain Admins group | CRITICAL |
 | CR-06 | Firewall Rule Disabled | FW1 syslog: ACL removed or changed | CRITICAL |
 
-### Alert Triage (Module 11)
+### Alert Triage
 Five simulated SIEM alerts evaluated end-to-end:
 - 3 true positives: external brute force, data exfiltration, backdoor admin account creation
 - 2 false positives: after-hours IT maintenance, normal file server access
@@ -120,4 +118,10 @@ Five simulated SIEM alerts evaluated end-to-end:
 
 ---
 
+## Links
+
+- [Full Project Write-up](https://oziomainya.github.io/network-defense)
+- [Portfolio](https://oziomainya.github.io)
+
+---
 *Ozioma Inya · [LinkedIn ↗](https://linkedin.com/in/ozioma-inya-a46327304) · [Github ↗](https://github.com/oziomainya)*
