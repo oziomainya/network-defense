@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Network Defense: VaultFin Services</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23050505'/><text x='50' y='68' font-family='monospace' font-size='48' font-weight='bold' fill='%2300ff41' text-anchor='middle'>OZI</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+
+<script>
+  const PROJECT = {
+    title:      "Network Defense: VaultFin Services",
+    category:   "cybersecurity",
+    status:     "live",
+    author:     "Ozioma Inya",
+    date:       "August, 2025",
+    overview:   "A comprehensive network defense engagement for VaultFin Services, a mid-sized financial firm handling customer transaction data and internal banking operations. Covers defense-in-depth principles and access control through zone-based policy firewalls, cryptography, cloud security, and SOC-level alert evaluation. Packet Tracer is used for hands-on ACL and firewall lab work; documentation covers cryptography, cloud posture, monitoring architecture, and alert triage. Completed as part of the Cisco Networking Academy Junior Cybersecurity Analyst career path.",
+
+    client: {
+      name:     "VaultFin Services",
+      industry: "Financial Services",
+      size:     "Mid-sized firm conataining approx. 200 staff across two sites",
+      task:     "Design and implement a layered network defense strategy following a compliance audit that flagged gaps in perimeter security, access control, and log monitoring.",
+      context:  "VaultFin processes customer payment data and holds sensitive account records. A recent PCI-DSS audit identified missing ACLs on the core router, no formal firewall zone policy, inadequate encryption of inter-site traffic, and no centralised log collection. This engagement addresses all findings end-to-end."
+    },
+
+    objectives: [
+      "Document VaultFin's defense posture using the defense-in-depth framework and identify gaps against industry security models",
+      "Harden VaultFin network devices and segment the internal network to reduce the blast radius of any breach",
+      "Define and implement a formal access control policy covering authentication, authorisation, and accountability (AAA)",
+      "Configure standard and extended ACLs on VaultFin-R1 to enforce traffic filtering between network segments",
+      "Evaluate firewall technology options and design a DMZ architecture suitable for VaultFin's public-facing services",
+      "Deploy a Zone-Based Policy Firewall (ZPF) on VaultFin-FW1 to enforce inter-zone traffic policy",
+      "Assess VaultFin's cloud security posture and document controls for their cloud-hosted customer portal",
+      "Implement cryptographic controls; hashing for integrity, AES for data at rest, and PKI for inter-site VPN",
+      "Configure network monitoring technologies including syslog, SNMP, NTP, and NetFlow on all key devices",
+      "Establish a network security data collection and analysis framework feeding into a centralised SIEM",
+      "Define a SOC alert triage workflow for VaultFin and evaluate a set of simulated security alerts"
+    ],
+
+    tools: [
+      { name: "Cisco Packet Tracer",  purpose: "ACL configuration and ZPF firewall simulation" },
+      { name: "Cisco IOS CLI",        purpose: "Router and firewall device configuration" },
+      { name: "Security Documentation", purpose: "Policy, analysis, and framework deliverables" },
+      { name: "SIEM Concepts",        purpose: "Log aggregation and alert correlation architecture" }
+    ],
+
+    skills: [
+      "Defense-in-Depth", "Network Hardening", "AAA / Access Control",
+      "Standard ACLs", "Extended ACLs", "Firewall Technologies",
+      "Zone-Based Policy Firewall", "DMZ Design", "Cloud Security",
+      "Cryptography", "PKI", "VPN Concepts", "Syslog / SNMP / NetFlow",
+      "SIEM Architecture", "Alert Triage", "Security Policies",
+      "Cisco IOS CLI", "Packet Tracer"
+    ],
+
+    parts: [
+      {
+        id:      "PART 01",
+        module:  "",
+        title:   "Defense-in-Depth Assessment",
+        type:    "documentation",
+        desc:    "Before any technical work could begin, VaultFin needed a documented baseline of where their defenses stood. This part covers the principles behind the defense-in-depth model; the idea that security must exist in layers, because no single control is sufficient on its own. Applied to VaultFin, this meant mapping each existing control (or gap) to a layer of the framework.\n\nThe defense-in-depth model organises controls into concentric layers: Policies and Procedures, Physical Security, Perimeter Security (firewalls, DMZ), Internal Network Security (VLANs, ACLs), Host Security (endpoint hardening), Application Security, and Data Security. At the time of the audit, VaultFin had partial coverage at the host and perimeter layers but almost nothing at the internal network, application, or data layers.\n\nSecurity principles underpinning the framework:\n- Confidentiality: Only authorised parties can access data\n- Integrity: Data cannot be altered without detection\n- Availability: Services remain accessible to authorised users\n\nThe CIA triad applies differently across VaultFin's systems. Payment processing demands all three equally. Internal HR files prioritise confidentiality. The customer portal prioritises availability.",
+        code:    `VaultFin Services - Defense-in-Depth Gap Analysis
+
+LAYER                     EXISTING CONTROL           STATUS
+------------------------------------------------------------
+Policies & Procedures     Acceptable Use Policy       PARTIAL - no incident response plan
+Physical Security         Server room key access      OK
+Perimeter Security        ISP router (no ACLs)        GAP - no firewall, no DMZ
+Internal Network          Flat LAN (no segmentation)  GAP - no VLANs, no ACLs
+Host Security             Windows Defender on PCs     PARTIAL - servers not hardened
+Application Security      No WAF, no input validation GAP
+Data Security             No encryption at rest       GAP - payment data unencrypted
+
+AUDIT FINDING SUMMARY:
+  Critical gaps: 3 (Perimeter, Internal Network, Data Security)
+  Partial gaps:  2 (Policies, Host Security)
+  Acceptable:    1 (Physical Security)
+  Score:         2/7 layers adequately controlled`
+      },
+      {
+        id:      "PART 02",
+        module:  "",
+        title:   "Network Hardening and Segmentation",
+        type:    "documentation",
+        desc:    "This part focuses on hardening individual devices and segmenting the network to limit lateral movement. For VaultFin, the primary finding was a completely flat network; all 200 staff, all servers, and all payment terminals shared a single broadcast domain. This is a critical risk: any compromised device could freely communicate with any other.\n\nNetwork segmentation was implemented using VLANs on VaultFin-SW1. Three segments were defined: the staff LAN, the payments processing zone, and a DMZ for externally accessible services. Inter-VLAN routing is handled by VaultFin-R1 with ACLs (covered in Part 4) enforcing what can talk to what.\n\nDevice hardening was applied to all Cisco devices using the principle of least privilege, only necessary services were enabled, all default credentials were changed, management access was restricted to the admin VLAN only.",
+        code:    `VaultFin Network Segmentation Plan
+
+VLAN ID   NAME              SUBNET              PURPOSE
+----------------------------------------------------------------------
+VLAN 10   STAFF             192.168.10.0/24     General staff endpoints
+VLAN 20   PAYMENTS          192.168.20.0/24     POS terminals, payment servers
+VLAN 30   DMZ               192.168.30.0/24     Web server, email relay (public-facing)
+VLAN 99   MANAGEMENT        192.168.99.0/24     Admin access to network devices only
+
+Device Hardening Checklist (applied to VaultFin-R1 and VaultFin-SW1):
+
+VaultFin-R1(config)# no cdp run
+VaultFin-R1(config)# service password-encryption
+VaultFin-R1(config)# security passwords min-length 12
+VaultFin-R1(config)# login block-for 60 attempts 3 within 30
+VaultFin-R1(config)# banner motd # AUTHORISED ACCESS ONLY - VaultFin Services.All activity is monitored and logged #
+VaultFin-R1(config)# line vty 0 15
+VaultFin-R1(config-line)# transport input ssh
+VaultFin-R1(config-line)# exec-timeout 5 0
+VaultFin-R1(config-line)# login local`
+      },
+      {
+        id:      "PART 03",
+        module:  "",
+        title:   "AAA Framework and Access Control Policy",
+        type:    "documentation",
+        desc:    "Access control answers three questions for every attempted action on a system: Who are you? (Identification and Authentication), What are you allowed to do? (Authorisation), and What did you do? (Accountability). This part covers these AAA principles in depth.\n\nFor VaultFin, access control was nearly absent. Staff logged into shared accounts. Network devices had default credentials. There was no audit trail of who accessed what. The remediation defined a formal access control policy with individual accounts, role-based access, and logging on all systems.\n\nAuthentication types applied at VaultFin:\n- Something you know: passwords (enforced complexity, 90-day rotation)\n- Something you have: hardware tokens for payment system access\n- Something you are: biometric badge readers on the server room door\n\nMulti-factor authentication (MFA) was mandated for all staff accessing the payments VLAN and all remote VPN connections. SSH with RSA keys replaced Telnet on all Cisco devices.",
+        code:    `VaultFin Access Control Policy - Summary
+
+RESOURCE              REQUIRED AUTH           ACCESS MODEL
+--------------------------------------------------------------
+Staff LAN (VLAN 10)   Username + Password      Role-based (RBAC)
+Payments (VLAN 20)    Username + MFA Token     Least privilege - payment roles only
+DMZ servers           SSH key + password       Admin accounts only, logged
+Network devices       SSH + local AAA          VLAN 99 (management) access only
+VPN (remote staff)    Certificate + MFA        Split-tunnel, payments VLAN excluded
+
+AAA Configuration on VaultFin-R1:
+
+VaultFin-R1(config)# aaa new-model
+VaultFin-R1(config)# aaa authentication login default local
+VaultFin-R1(config)# aaa authorization exec default local
+VaultFin-R1(config)# aaa accounting exec default start-stop group radius
+VaultFin-R1(config)# username admin privilege 15 secret [REDACTED]
+VaultFin-R1(config)# username netmonitor privilege 5 secret [REDACTED]
+
+SSH Key Generation:
+
+VaultFin-R1(config)# ip domain-name vaultfin.local
+VaultFin-R1(config)# crypto key generate rsa
+How many bits in the modulus [512]: 1024
+% Generating 1024 bit RSA keys, keys will be non-exportable...[OK]
+VaultFin-R1(config)# ip ssh version 2
+VaultFin-R1(config)# ip ssh time-out 60
+VaultFin-R1(config)# ip ssh authentication-retries 3`
+      },
+      {
+        id:      "PART 04",
+        module:  "",
+        title:   "ACL Configuration on VaultFin-R1",
+        type:    "packet-tracer",
+        desc:    "ACLs are the primary tool for enforcing traffic policy on Cisco routers. A standard ACL filters on source IP only and is placed close to the destination. An extended ACL can filter on source IP, destination IP, protocol, and port number and is placed close to the source to stop unwanted traffic as early as possible.\n\nFor VaultFin, three ACLs were required:\n1. Prevent STAFF VLAN from directly accessing PAYMENTS VLAN (only the payments app server is the legitimate path)\n2. Block all inbound traffic from the internet to the internal VLANs (DMZ is the only public-facing zone)\n3. Permit management access to network devices from VLAN 99 only, deny all others\n\nAll ACLs were configured and tested in Cisco Packet Tracer. Simulation mode was used to verify that blocked traffic is dropped at the router interface and never reaches the destination.",
+        code:    `! ── ACL 101 -- Block STAFF direct access to PAYMENTS VLAN ──────────────
+! Extended ACL -- placed inbound on Gi0/0.10 (STAFF subinterface)
+
+VaultFin-R1(config)# ip access-list extended STAFF-TO-PAYMENTS-DENY
+VaultFin-R1(config-ext-nacl)# remark Block direct staff access to payments subnet
+VaultFin-R1(config-ext-nacl)# deny ip 192.168.10.0 0.0.0.255 192.168.20.0 0.0.0.255
+VaultFin-R1(config-ext-nacl)# permit ip 192.168.10.0 0.0.0.255 any
+VaultFin-R1(config-ext-nacl)# exit
+
+VaultFin-R1(config)# interface GigabitEthernet0/0.10
+VaultFin-R1(config-subif)# ip access-group STAFF-TO-PAYMENTS-DENY in
+
+! ── ACL 102 -- Block internet inbound to internal VLANs ─────────────────
+! Extended ACL -- placed inbound on Gi0/1 (WAN/internet interface)
+
+VaultFin-R1(config)# ip access-list extended INTERNET-INBOUND-POLICY
+VaultFin-R1(config-ext-nacl)# remark Permit return traffic (established sessions)
+VaultFin-R1(config-ext-nacl)# permit tcp any any established
+VaultFin-R1(config-ext-nacl)# remark Permit inbound to DMZ web server only
+VaultFin-R1(config-ext-nacl)# permit tcp any host 192.168.30.10 eq 80
+VaultFin-R1(config-ext-nacl)# permit tcp any host 192.168.30.10 eq 443
+VaultFin-R1(config-ext-nacl)# remark Deny everything else inbound
+VaultFin-R1(config-ext-nacl)# deny ip any 192.168.10.0 0.0.0.255
+VaultFin-R1(config-ext-nacl)# deny ip any 192.168.20.0 0.0.0.255
+VaultFin-R1(config-ext-nacl)# deny ip any 192.168.99.0 0.0.0.255
+VaultFin-R1(config-ext-nacl)# permit ip any any
+VaultFin-R1(config-ext-nacl)# exit
+
+VaultFin-R1(config)# interface GigabitEthernet0/1
+VaultFin-R1(config-if)# ip access-group INTERNET-INBOUND-POLICY in
+
+! ── ACL 103 -- Management access restricted to VLAN 99 ──────────────────
+! Standard ACL for VTY line access
+
+VaultFin-R1(config)# ip access-list standard MGMT-ACCESS-ONLY
+VaultFin-R1(config-std-nacl)# permit 192.168.99.0 0.0.0.255
+VaultFin-R1(config-std-nacl)# deny any
+VaultFin-R1(config-std-nacl)# exit
+
+VaultFin-R1(config)# line vty 0 15
+VaultFin-R1(config-line)# access-class MGMT-ACCESS-ONLY in
+
+! ── Verification ─────────────────────────────────────────────────────────
+VaultFin-R1# show ip access-lists
+VaultFin-R1# show ip interface GigabitEthernet0/0.10
+! Confirm: Inbound access list is STAFF-TO-PAYMENTS-DENY
+
+! Test 1 (should FAIL): STAFF PC pings PAYMENTS server directly
+! C:\> ping 192.168.20.50  -- Expected: Request timed out
+
+! Test 2 (should PASS): STAFF PC accesses internet
+! C:\> ping 8.8.8.8  -- Expected: Reply from 8.8.8.8
+
+! Test 3 (should PASS): DMZ web server reachable from internet on port 80/443
+! Expected: HTTP/HTTPS connections succeed`
+      },
+      {
+        id:      "PART 05",
+        module:  "",
+        title:   "Firewall Design and DMZ Architecture",
+        type:    "documentation",
+        desc:    "This part covers the spectrum of firewall technologies and how they are deployed in practice. A packet filter (stateless) inspects each packet in isolation against static rules. A stateful firewall tracks connection state, it knows whether a packet is part of an established session or is arriving unsolicited. A next-generation firewall (NGFW) adds deep packet inspection, application awareness, and intrusion prevention.\n\nFor VaultFin, a stateful firewall was recommended as the minimum viable perimeter control, with IPS signatures enabled for the payments VLAN. A three-interface DMZ design was implemented: an inside interface (private VLANs), an outside interface (internet/WAN), and a DMZ interface (web server, email relay).\n\nIntrusion detection vs intrusion prevention:\n- IDS (Intrusion Detection System): monitors and alerts, is passive, never drops traffic\n- IPS (Intrusion Prevention System): monitors and blocks inline, is active, can drop malicious packets\n\nVaultFin deployed an IPS inline on the path between the internet and the payments VLAN. The DMZ segment uses IDS only (logs alerts without blocking) to avoid disrupting legitimate web traffic while still generating evidence for the SIEM.",
+        code:    `VaultFin DMZ Architecture - Three-Zone Firewall Design
+
+INTERNET (untrusted)
+     |
+  [VaultFin-FW1]  <-- Zone-Based Policy Firewall (see Part 6)
+     |         |
+  [INSIDE]   [DMZ]
+  VLANs       Web Server: 192.168.30.10
+  10, 20, 99  Email Relay: 192.168.30.20
+
+Traffic Policy Matrix:
+SOURCE          DESTINATION     PERMITTED TRAFFIC
+-----------     -----------     -------------------------------------------
+Internet        DMZ             TCP 80 (HTTP), TCP 443 (HTTPS) to web server
+Internet        DMZ             TCP 25 (SMTP) to email relay only
+Internet        INSIDE          DENIED -- all traffic blocked
+DMZ             INSIDE          DENIED -- DMZ cannot initiate to inside
+INSIDE          DMZ             Permitted for admin tasks (SSH from VLAN 99)
+INSIDE          Internet        Permitted (HTTP/HTTPS outbound, stateful return)
+PAYMENTS        Internet        DENIED -- payments VLAN has no internet access
+
+Firewall Type Selected: Stateful + IPS signatures
+Rationale: VaultFin processes payment card data (PCI-DSS scope).
+Stateless ACLs alone are insufficient, connection state tracking and active threat blocking are required for compliance.`
+      },
+      {
+        id:      "PART 06",
+        module:  "",
+        title:   "ZPF Deployment on VaultFin-FW1",
+        type:    "packet-tracer",
+        desc:    "A Zone-Based Policy Firewall (ZPF) replaces the legacy interface ACL model with a zone model. Interfaces are assigned to named security zones. Traffic between zones is denied by default. It must be explicitly permitted by a policy. Traffic within the same zone flows freely. This is far more maintainable and auditable than a sprawling set of per-interface ACLs.\n\nThe ZPF is configured in three stages: define zones, build class-maps and policy-maps to describe what traffic is permitted, then apply the policy to zone pairs.\n\nFor VaultFin, three zones were created: INSIDE (staff and management VLANs), PAYMENTS (isolated payment processing), and OUTSIDE (internet). The Packet Tracer simulation confirms that uninspected traffic between zones is dropped by default and only explicitly permitted traffic passes through.",
+        code:    `! ── Stage 1: Define Security Zones ─────────────────────────────────────
+
+VaultFin-FW1(config)# zone security INSIDE
+VaultFin-FW1(config-sec-zone)#
+VaultFin-FW1(config-sec-zone)# exit
+
+VaultFin-FW1(config)# zone security PAYMENTS
+VaultFin-FW1(config-sec-zone)#
+VaultFin-FW1(config-sec-zone)# exit
+
+VaultFin-FW1(config)# zone security OUTSIDE
+VaultFin-FW1(config-sec-zone)#
+VaultFin-FW1(config-sec-zone)# exit
+
+! ── Stage 2: Assign Interfaces to Zones ─────────────────────────────────
+
+VaultFin-FW1(config)# interface GigabitEthernet0/0/0
+VaultFin-FW1(config-if)# zone-member security INSIDE
+VaultFin-FW1(config-if)# exit
+
+VaultFin-FW1(config)# interface GigabitEthernet0/0/1
+VaultFin-FW1(config-if)# zone-member security OUTSIDE
+VaultFin-FW1(config-if)# exit
+
+VaultFin-FW1(config)# interface GigabitEthernet0/2
+VaultFin-FW1(config-if)# zone-member security PAYMENTS
+VaultFin-FW1(config-if)# exit
+
+! ── Stage 3: Class-Maps -- Define Interesting Traffic ───────────────────
+
+VaultFin-FW1(config)# class-map type inspect match-any INSIDE-TO-OUTSIDE-TRAFFIC
+VaultFin-FW1(config-cmap)# match protocol http
+VaultFin-FW1(config-cmap)# match protocol https
+VaultFin-FW1(config-cmap)# match protocol dns
+VaultFin-FW1(config-cmap)# exit
+
+VaultFin-FW1(config)# class-map type inspect match-any PAYMENTS-INTERNAL
+VaultFin-FW1(config-cmap)# match protocol tcp
+VaultFin-FW1(config-cmap)# exit
+
+! ── Stage 4: Policy-Maps -- Apply Actions ───────────────────────────────
+
+VaultFin-FW1(config)# policy-map type inspect INSIDE-TO-OUTSIDE-POLICY
+VaultFin-FW1(config-pmap)# class type inspect INSIDE-TO-OUTSIDE-TRAFFIC
+VaultFin-FW1(config-pmap-c)# inspect
+VaultFin-FW1(config-pmap-c)# exit
+VaultFin-FW1(config-pmap)# class class-default
+VaultFin-FW1(config-pmap-c)# drop log
+VaultFin-FW1(config-pmap-c)# exit
+
+VaultFin-FW1(config)# policy-map type inspect PAYMENTS-ISOLATION-POLICY
+VaultFin-FW1(config-pmap)# class class-default
+VaultFin-FW1(config-pmap-c)# drop log
+VaultFin-FW1(config-pmap-c)# exit
+
+! ── Stage 5: Zone-Pairs -- Apply Policy to Zone Pairs ───────────────────
+
+VaultFin-FW1(config)# zone-pair security INSIDE-TO-OUTSIDE source INSIDE destination OUTSIDE
+VaultFin-FW1(config-sec-zone-pair)# service-policy type inspect INSIDE-TO-OUTSIDE-POLICY
+VaultFin-FW1(config-sec-zone-pair)# exit
+
+VaultFin-FW1(config)# zone-pair security OUTSIDE-TO-INSIDE source OUTSIDE destination INSIDE
+VaultFin-FW1(config-sec-zone-pair)# service-policy type inspect PAYMENTS-ISOLATION-POLICY
+VaultFin-FW1(config-sec-zone-pair)# exit
+
+VaultFin-FW1(config)# zone-pair security PAYMENTS-TO-OUTSIDE source PAYMENTS destination OUTSIDE
+VaultFin-FW1(config-sec-zone-pair)# service-policy type inspect PAYMENTS-ISOLATION-POLICY
+VaultFin-FW1(config-sec-zone-pair)# exit
+
+! ── Verification ─────────────────────────────────────────────────────────
+VaultFin-FW1# show zone security
+VaultFin-FW1# show zone-pair security
+VaultFin-FW1# show policy-map type inspect zone-pair sessions
+
+! Expected: INSIDE-TO-OUTSIDE -- HTTP/HTTPS inspect active, sessions tracked
+! Expected: OUTSIDE-TO-INSIDE -- class-default drop (no sessions initiated from outside)
+! Expected: PAYMENTS-TO-OUTSIDE -- all traffic dropped (payments zone isolated)`
+      },
+      {
+        id:      "PART 07",
+        module:  "",
+        title:   "Cloud Security Posture Assessment",
+        type:    "documentation",
+        desc:    "VaultFin runs a customer-facing portal hosted on a third-party cloud platform. This part covers how security responsibility is shared between a cloud customer and their provider, the Shared Responsibility Model and what controls the customer must own regardless of the provider's baseline.\n\nCloud service models and their responsibility split:\n- IaaS (Infrastructure as a Service): Provider secures physical hardware and hypervisor. Customer is responsible for OS, middleware, applications, and data.\n- PaaS (Platform as a Service): Provider secures OS and runtime. Customer secures applications and data.\n- SaaS (Software as a Service): Provider secures almost everything. Customer secures user access management and data governance only.\n\nVaultFin's customer portal uses PaaS. This means VaultFin owns application security, data encryption, and access management, all of which were found to be missing at audit.\n\nCloud security controls applied to the VaultFin portal:\n- Encryption in transit: TLS 1.3 enforced, TLS 1.0 and 1.1 disabled\n- Encryption at rest: AES-256 for all stored customer records\n- Identity management: MFA required for all portal admin accounts\n- Logging: Cloud provider audit logs forwarded to the on-premises SIEM\n- Backup: Automated daily snapshots retained for 30 days, stored in a separate region",
+        code:    `VaultFin Cloud Security Assessment -- Customer Portal
+
+PROVIDER MODEL: PaaS (managed runtime, customer owns app + data)
+
+SHARED RESPONSIBILITY MATRIX:
+CONTROL AREA              PROVIDER OWNS     VAULTFIN OWNS
+---------------------------------------------------------------
+Physical infrastructure   YES               -
+Hypervisor / OS           YES               -
+Runtime / middleware       YES              -
+Application code           -                YES (WAF required)
+Data encryption at rest    -                YES (AES-256 - GAP at audit)
+Data encryption in transit Partial (TLS)    YES (enforce TLS 1.3 - GAP at audit)
+Identity / access mgmt     -                YES (MFA - GAP at audit)
+Security monitoring        Logs available   YES (must collect - GAP at audit)
+Backup / DR                -                YES (daily snapshots - GAP at audit)
+
+POST-REMEDIATION CONTROLS:
+  Encryption at rest:     AES-256 enabled on all customer data stores
+  TLS policy:             TLS 1.3 enforced, TLS 1.0/1.1 disabled
+  MFA:                    Required for all admin portal accounts
+  WAF:                    Cloud WAF enabled with OWASP Top 10 ruleset
+  Log forwarding:         Cloud audit logs shipping to on-prem SIEM (syslog)
+  Backup:                 Daily automated, 30-day retention, cross-region`
+      },
+      {
+        id:      "PART 08",
+        module:  "",
+        title:   "Cryptographic Controls for Data and VPN",
+        type:    "documentation",
+        desc:    "Cryptography is the mathematical foundation of modern network security. This part covers three categories: hashing (integrity), symmetric encryption (confidentiality at speed), and asymmetric encryption (key exchange and digital signatures).\n\nHashing produces a fixed-length digest from any input. The same input always produces the same hash. Even a single changed character produces a completely different hash. VaultFin uses SHA-256 to verify the integrity of software updates and configuration backups. Before any update is applied, its hash is compared against the vendor-published value.\n\nSymmetric encryption uses a single shared key for both encrypt and decrypt. It is fast and efficient for bulk data. VaultFin uses AES-256 for encrypting data at rest (customer records in the database) and for the IPSec tunnel between sites.\n\nAsymmetric encryption uses a public/private key pair. Data encrypted with a public key can only be decrypted by the corresponding private key. This solves the key distribution problem inherent in symmetric systems. VaultFin uses RSA-2048 for the TLS handshake on the customer portal and for SSH authentication to network devices.\n\nPublic Key Infrastructure (PKI) is the system of Certificate Authorities (CAs), certificates, and revocation mechanisms that makes asymmetric encryption practical at scale. VaultFin's customer portal TLS certificate is issued by a trusted public CA. Internal device certificates (for the VPN) are issued by an internal CA running on the Windows Server.",
+        code:    `VaultFin Cryptographic Controls Summary
+
+HASHING (Integrity):
+  Algorithm:  SHA-256
+  Use cases:  Software update verification, config backup integrity
+  Example:    certutil -hashfile update-package.exe SHA256
+              Compare output against vendor-published hash before install
+
+SYMMETRIC ENCRYPTION (Confidentiality - bulk data):
+  Algorithm:  AES-256-CBC
+  Use cases:  Database encryption at rest, IPSec tunnel payload encryption
+  Key mgmt:   Keys stored in encrypted key vault, rotated annually
+  IPSec tunnel config snippet:
+    crypto isakmp policy 10
+     encryption aes 256
+     hash sha256
+     authentication pre-share
+     group 14
+    crypto ipsec transform-set VAULTFIN-TS esp-aes 256 esp-sha256-hmac
+
+ASYMMETRIC ENCRYPTION (Key exchange, authentication):
+  Algorithm:  RSA-2048
+  Use cases:  TLS handshake (portal), SSH authentication (network devices)
+  PKI chain:  Public CA (portal cert) / Internal CA (VPN and device certs)
+
+DIGITAL SIGNATURES (Non-repudiation):
+  Algorithm:  RSA with SHA-256 digest
+  Use cases:  Code signing for software deployments, email S/MIME
+
+VPN ARCHITECTURE:
+  Site-to-site IPSec VPN between HQ and Branch
+  IKE Phase 1: AES-256 / SHA-256 / DH Group 14
+  IKE Phase 2: AES-256 / SHA-256 / ESP
+  Authentication: Pre-shared key (to be migrated to cert-based in next cycle)`
+      },
+      {
+        id:      "PART 09",
+        module:  "",
+        title:   "Network Monitoring Protocol Configuration",
+        type:    "documentation",
+        desc:    "Network monitoring requires a suite of protocols working together. This part covers the key technologies: Syslog for event logging, SNMP for device health monitoring, NTP for time synchronisation, and NetFlow for traffic flow analysis.\n\nTime synchronisation is the foundation everything else depends on. If devices have unsynchronised clocks, log correlation becomes impossible. An event on the router at 14:32 may appear to predate or postdate the firewall log for the same incident by hours. NTP was configured on all VaultFin devices pointing to a local NTP server (which in turn syncs to a public stratum-1 source).\n\nSyslog sends event messages from devices to a centralised log server. Severity levels run from 0 (Emergency) to 7 (Debugging). VaultFin configured all devices to send severity 0-6 (Informational and above) to the SIEM.\n\nSNMP allows the SIEM to poll devices for health metrics; CPU, memory, interface utilisation, error counts. VaultFin uses SNMPv3 (the only version with authentication and encryption, SNMPv1 and v2c send community strings in plaintext).\n\nNetFlow records summaries of every traffic flow through the router -- source IP, destination IP, protocol, ports, byte count, and timestamps. This data is invaluable for detecting anomalous traffic patterns (e.g. a staff workstation suddenly sending large volumes of data to an external IP at 3am).",
+        code:    `! ── NTP Configuration (all devices) ─────────────────────────────────────
+
+VaultFin-R1(config)# ntp server 192.168.99.10  ! Internal NTP server
+VaultFin-R1(config)# ntp authenticate
+VaultFin-R1(config)# ntp authentication-key 1 md5 [REDACTED]
+VaultFin-R1(config)# ntp trusted-key 1
+VaultFin-R1(config)# clock timezone WAT 1  ! West Africa Time
+
+! ── Syslog Configuration ─────────────────────────────────────────────────
+
+VaultFin-R1(config)# logging host 192.168.99.20  ! SIEM/syslog server
+VaultFin-R1(config)# logging trap informational   ! Severity 0-6
+VaultFin-R1(config)# logging source-interface GigabitEthernet0/0
+VaultFin-R1(config)# service timestamps log datetime msec localtime show-timezone
+
+! ── SNMPv3 Configuration ─────────────────────────────────────────────────
+
+VaultFin-R1(config)# snmp-server group VAULTFIN-MON v3 priv
+VaultFin-R1(config)# snmp-server user siem-poller VAULTFIN-MON v3 auth sha [REDACTED] priv aes 128 [REDACTED]
+VaultFin-R1(config)# snmp-server host 192.168.99.20 version 3 priv siem-poller
+VaultFin-R1(config)# snmp-server enable traps
+
+! ── NetFlow Configuration ────────────────────────────────────────────────
+
+VaultFin-R1(config)# ip flow-export destination 192.168.99.20 2055
+VaultFin-R1(config)# ip flow-export version 9
+VaultFin-R1(config)# ip flow-cache timeout active 1
+VaultFin-R1(config)# interface GigabitEthernet0/1   ! WAN interface
+VaultFin-R1(config-if)# ip flow ingress
+VaultFin-R1(config-if)# ip flow egress
+
+! ── Verification ─────────────────────────────────────────────────────────
+VaultFin-R1# show ntp status           ! Confirm: Clock is synchronised
+VaultFin-R1# show logging              ! Confirm: Logging to 192.168.99.20
+VaultFin-R1# show snmp                 ! Confirm: SNMP packets in/out
+VaultFin-R1# show ip cache flow        ! Confirm: NetFlow active flows`
+      },
+      {
+        id:      "PART 10",
+        module:  "",
+        title:   "SIEM Architecture and Log Collection Framework",
+        type:    "documentation",
+        desc:    "Collecting logs and flow data is only useful if that data is aggregated, correlated, and searchable. Module 10 covers the types of security data available on a network and how a SIEM (Security Information and Event Management) system processes it.\n\nTypes of security data collected at VaultFin:\n- Syslog events: from routers, switches, firewalls, and servers\n- NetFlow records: traffic flow summaries from VaultFin-R1\n- SNMP traps: device health alerts (interface down, high CPU)\n- Windows Event Logs: authentication events (Event ID 4624 success, 4625 failure), privilege use (4672), account changes (4720)\n- Firewall logs: every permitted and denied connection with timestamps\n- DNS query logs: all lookups from internal hosts (flags command-and-control domains)\n\nThe SIEM performs three key functions: normalisation (converting logs from different formats into a common schema), correlation (matching related events across sources), and alerting (triggering notifications when a correlation rule matches).\n\nCorrelation rule examples deployed at VaultFin:\n- Brute force detection: more than 5 failed logins (Event ID 4625) from the same source within 60 seconds\n- Lateral movement: a workstation initiates connections to more than 10 internal hosts within 5 minutes\n- Data exfiltration: NetFlow shows a single internal host sending more than 100MB outbound in one hour outside business hours",
+        code:    `VaultFin SIEM Data Collection Architecture
+
+DATA SOURCES --> COLLECTION --> NORMALISATION --> CORRELATION --> ALERTS
+
+Sources configured:
+  VaultFin-R1       -->  Syslog (UDP 514)    -->  SIEM
+  VaultFin-FW1      -->  Syslog (UDP 514)    -->  SIEM
+  VaultFin-SW1      -->  Syslog (UDP 514)    -->  SIEM
+  VaultFin-R1       -->  NetFlow (UDP 2055)  -->  SIEM
+  Windows Servers   -->  WEF (Windows Event  -->  SIEM
+                          Forwarding, port
+                          5985)
+  Cloud Portal      -->  Syslog forward      -->  SIEM
+
+SIEM Correlation Rules (Priority):
+
+RULE ID   NAME                    LOGIC                               ACTION
+------    ----                    -----                               ------
+CR-01     Brute Force Login       4625 count > 5 in 60s same src     ALERT HIGH
+CR-02     After-Hours Admin Login 4624 + privilege 15 + time > 20:00  ALERT MEDIUM
+CR-03     Lateral Movement        1 src to > 10 dst in 5min          ALERT HIGH
+CR-04     Data Exfiltration       NetFlow > 100MB outbound in 1hr    ALERT HIGH
+CR-05     New Admin Account       Event ID 4720 + group 544          ALERT CRITICAL
+CR-06     Firewall Rule Disabled  FW1 syslog: ACL removed/changed    ALERT CRITICAL
+
+Log Retention Policy:
+  Hot storage (SIEM searchable): 90 days
+  Cold storage (compressed archive): 1 year
+  Reason: PCI-DSS requires 1 year minimum retention for payment environments`
+      },
+      {
+        id:      "PART 11",
+        module:  "",
+        title:   "SOC Alert Triage and Incident Evaluation",
+        type:    "documentation",
+        desc:    "Receiving alerts is only the first step. A SOC analyst must evaluate each alert to determine whether it represents a true positive (a real threat), a false positive (a legitimate activity that triggered the rule), or a true negative (correctly no alert for clean traffic). Acting on every alert without triage wastes resources and causes alert fatigue, making it easy to miss the alerts that actually matter.\n\nThis part establishes an alert evaluation process. For VaultFin, a structured triage workflow was documented with five steps: Receive, Classify, Investigate, Determine, and Act.\n\nFive simulated alerts from the VaultFin SIEM were evaluated as the final exercise of this engagement. Each alert was investigated using available log data, NetFlow records, and contextual knowledge of the environment to reach a determination and recommend a response.\n\nKey lesson: A high-fidelity alert on its own is not enough. Context determines action. A brute-force alert from an IP in the management VLAN during a known password-reset window is different from the same alert arriving from an unknown external IP at 3am.",
+        code:    `VaultFin SOC Alert Triage -- Simulated Alert Evaluation
+
+ALERT TRIAGE WORKFLOW:
+  1. RECEIVE   -- Alert fires in SIEM with rule ID, severity, source
+  2. CLASSIFY  -- Review rule logic. What would cause this to fire?
+  3. INVESTIGATE -- Pull raw logs. Confirm source IP, user, time, volume
+  4. DETERMINE -- True positive / False positive / True negative?
+  5. ACT       -- Block, escalate, close, or tune the rule
+
+SIMULATED ALERT EVALUATIONS:
+
+[ALERT-001] CR-01 Brute Force Login -- SEVERITY: HIGH
+  Source IP: 203.0.113.45 (external, unknown)
+  Target: VaultFin staff portal login page
+  Detail: 47 failed login attempts against user finance.manager in 90 seconds
+  Determination: TRUE POSITIVE -- external brute force attack
+  Action: Block source IP at FW1, lock account, notify user, escalate to incident
+
+[ALERT-002] CR-02 After-Hours Admin Login -- SEVERITY: MEDIUM
+  Source IP: 192.168.99.15 (management VLAN -- known admin workstation)
+  User: sysadmin01 (known IT staff)
+  Time: 21:34 local time
+  Detail: Privilege-15 login to VaultFin-R1 outside business hours
+  Determination: FALSE POSITIVE -- IT admin performing scheduled maintenance
+  Action: Verify with IT team (confirmed). Close alert. Log as exception.
+
+[ALERT-003] CR-04 Data Exfiltration -- SEVERITY: HIGH
+  Source IP: 192.168.10.88 (STAFF VLAN)
+  Destination: 45.33.32.156 (external, unclassified)
+  Volume: 340MB outbound over 45 minutes at 02:15
+  Determination: TRUE POSITIVE -- anomalous data transfer to unknown external host
+  Action: Block host at FW1, isolate endpoint, begin forensic investigation
+
+[ALERT-004] CR-03 Lateral Movement -- SEVERITY: HIGH
+  Source IP: 192.168.10.44 (STAFF VLAN)
+  Connections: 3 internal hosts in 5 minutes (file server, printer, DC)
+  Detail: Windows file share access during business hours
+  Determination: FALSE POSITIVE -- normal workday file server and print activity
+  Action: Tune rule to exclude known-good services. Close alert.
+
+[ALERT-005] CR-05 New Admin Account -- SEVERITY: CRITICAL
+  Event: Event ID 4720 -- new account created
+  New account: svc.backup99 added to Domain Admins group
+  Created by: finance.manager account
+  Time: 03:12
+  Determination: TRUE POSITIVE -- compromised finance.manager account used to create
+  backdoor admin account. Finance staff do not have account creation rights.
+  Action: Disable both accounts immediately, force domain-wide password reset,
+  escalate to incident response team, begin Active Directory audit`
+      }
+    ],
+
+    results: [
+      { type: "success", text: "Defense-in-depth gap analysis identified 3 critical and 2 partial control gaps across VaultFin's 7-layer security model. All critical gaps were remediated within the scope of this engagement." },
+      { type: "success", text: "Network segmented into 4 VLANs (STAFF, PAYMENTS, DMZ, MANAGEMENT). Staff VLAN direct access to PAYMENTS VLAN blocked and verified in Packet Tracer simulation mode." },
+      { type: "success", text: "AAA fully configured on VaultFin-R1 and VaultFin-SW1. Telnet disabled, SSHv2 with RSA-2048 enforced, VTY lines locked to VLAN 99 only." },
+      { type: "success", text: "Three extended and standard ACLs configured and verified. Internet-inbound policy blocks all direct access to internal VLANs. Only DMZ ports 80/443 permitted from outside." },
+      { type: "success", text: "ZPF deployed on VaultFin-FW1 with three zones (INSIDE, PAYMENTS, OUTSIDE). Default-deny confirmed; only explicitly permitted zone-pair traffic passes. Verified with show zone-pair security." },
+      { type: "success", text: "Cloud security posture remediated: TLS 1.3 enforced, AES-256 at rest enabled, MFA deployed on portal admin accounts, WAF enabled with OWASP Top 10 ruleset." },
+      { type: "success", text: "Cryptographic controls documented and implemented: SHA-256 for integrity, AES-256 for bulk encryption, RSA-2048 for key exchange. IPSec site-to-site VPN configured between HQ and Branch." },
+      { type: "success", text: "NTP, syslog, SNMPv3, and NetFlow configured on all key devices. All log streams verified reaching the SIEM server at 192.168.99.20." },
+      { type: "success", text: "6 SIEM correlation rules deployed covering brute force, lateral movement, data exfiltration, and privilege abuse scenarios." },
+      { type: "warning", text: "Initial ZPF config omitted the PAYMENTS zone-pair and traffic from payments VLAN was routing freely to OUTSIDE before the oversight was caught during verification." },
+      { type: "fix",    text: "Added the PAYMENTS-TO-OUTSIDE zone-pair with drop-all policy. Confirmed in show zone-pair security, payments segment now fully isolated from internet." },
+      { type: "success", text: "5 simulated SIEM alerts evaluated: 3 true positives (brute force, exfiltration, backdoor account), 2 false positives (after-hours admin, normal lateral file access). All determinations documented with supporting log evidence." }
+    ],
+
+    lessons: [
+      {
+        title: "Default-deny is the only safe starting point",
+        text:  "The ZPF model makes this visceral in a way ACLs do not. When you assign an interface to a zone, all inter-zone traffic stops immediately. You have to explicitly permit what should flow. With ACL-based firewalls it is easy to accidentally leave a permissive implicit rule. The ZPF model forces you to think in terms of what you allow, not what you block."
+      },
+      {
+        title: "Time synchronisation is not optional for any security infrastructure",
+        text:  "The correlation between the brute force alert (Alert-001) and the backdoor account creation (Alert-005) only became visible because the logs shared a common timestamp. If NTP was not configured and device clocks drifted by even 10 minutes, the causal link between the two events would have been invisible in the SIEM. NTP is a prerequisite for any meaningful log analysis."
+      },
+      {
+        title: "Alert triage requires context, not just rules",
+        text:  "Two of the five simulated alerts were false positives. Both would have consumed incident response resources and potentially caused disruption if acted on without investigation. The lesson is that a correlation rule fires when its logic matches. It does not know whether the match is malicious. The analyst supplies the context. Documenting what normal looks like (baselining) is what makes distinguishing abnormal possible."
+      },
+      {
+        title: "The shared responsibility model changes who is accountable, not whether the control is needed",
+        text:  "VaultFin's initial assumption was that their cloud provider was responsible for encrypting customer data. The shared responsibility assessment made clear that for a PaaS model, data encryption is entirely the customer's responsibility. The provider supplies the capability; the customer must configure and enforce it. This is a common gap in cloud deployments and one that PCI-DSS auditors specifically check."
+      },
+      {
+        title: "What to build next",
+        text:  "A stronger version of this engagement would include a live Wireshark capture on the ZPF interfaces to inspect dropped packets, a full IDS/IPS ruleset review with Snort signatures, and a tabletop incident response exercise using the backdoor account scenario from Alert-005 as the trigger."
+      }
+    ],
+
+    githubLink:    "https://github.com/oziomainya/network-defense",
+    portfolioLink: "htps://oziomainya.github.io",
+    authorLinkedIn:"https://linkedin.com/in/ozioma-inya-a46327304"
+  };
+</script>
+
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#050505;--bg-2:#0c0c0c;--bg-card:#0f0f0f;--bg-code:#080808;
+  --green:#00ff41;--green-d:#00b32d;--green-dk:#001f08;
+  --cyan:#00e5ff;--cyan-d:#00a8c0;
+  --amber:#ffd600;--red:#ff4444;--text:#ccffcc;
+  --text-2:#5a8f5a;--text-m:#2a4a2a;
+  --border:rgba(0,255,65,.09);--border-s:rgba(0,255,65,.22);
+  --font:'JetBrains Mono','Courier New',monospace
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.7;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,255,65,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,65,.02) 1px,transparent 1px);background-size:44px 44px;pointer-events:none;z-index:0}
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.1) 2px,rgba(0,0,0,.1) 4px);pointer-events:none;z-index:999}
+nav{position:fixed;top:0;width:100%;z-index:100;background:rgba(5,5,5,.97);border-bottom:1px solid var(--border);padding:0 2.5rem;height:56px;display:flex;align-items:center;justify-content:space-between}
+.nav-back{color:var(--text-2);text-decoration:none;font-size:11px;letter-spacing:.1em;transition:color .2s}
+.nav-back::before{content:'<-- ';color:var(--text-m)}
+.nav-back:hover{color:var(--green)}
+.nav-id{color:var(--text-m);font-size:11px;letter-spacing:.1em}
+main{position:relative;z-index:1;max-width:800px;margin:0 auto;padding:6rem 2.5rem 5rem}
+.proj-header{margin-bottom:4rem;padding-bottom:2.5rem;border-bottom:1px solid var(--border)}
+.proj-meta{display:flex;align-items:center;gap:.65rem;margin-bottom:1.5rem;flex-wrap:wrap}
+.meta-cat{font-size:9px;letter-spacing:.15em;padding:3px 10px;border-radius:2px;background:rgba(0,229,255,.06);color:var(--cyan-d);border:1px solid rgba(0,229,255,.2)}
+.meta-status{font-size:9px;letter-spacing:.12em;display:inline-flex;align-items:center;gap:5px}
+.meta-status::before{content:'';width:6px;height:6px;border-radius:50%;animation:pulse 2s ease-in-out infinite}
+.meta-status.live{color:var(--green)}.meta-status.live::before{background:var(--green)}
+.meta-status.wip{color:var(--cyan)}.meta-status.wip::before{background:var(--cyan)}
+.meta-status.soon{color:var(--amber)}.meta-status.soon::before{background:var(--amber)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.meta-source{font-size:9px;letter-spacing:.08em;padding:3px 10px;border-radius:2px;background:rgba(0,229,255,.05);color:var(--cyan-d);border:1px solid rgba(0,229,255,.15)}
+.meta-date{font-size:10px;color:var(--text-m)}
+.proj-title{font-size:clamp(1.6rem,3.5vw,2.4rem);font-weight:700;color:var(--cyan);letter-spacing:-.02em;margin-bottom:1rem;line-height:1.15}
+.proj-overview{font-size:13px;color:var(--text-2);line-height:2;max-width:640px}
+.proj-actions{display:flex;gap:.75rem;margin-top:2rem;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.55rem 1.2rem;font-family:var(--font);font-size:11px;letter-spacing:.1em;cursor:pointer;transition:all .18s;text-decoration:none;border-radius:2px}
+.btn-p{background:var(--green-dk);color:var(--green);border:1px solid rgba(0,255,65,.3)}
+.btn-p:hover{background:var(--green);color:#030d06}
+.btn-s{background:transparent;color:var(--text-2);border:1px solid var(--border-s)}
+.btn-s:hover{color:var(--cyan);border-color:rgba(0,229,255,.3)}
+.client-brief{background:rgba(255,214,0,.04);border:1px solid rgba(255,214,0,.18);border-radius:4px;padding:1.5rem 1.75rem;margin-bottom:3.5rem;position:relative;overflow:hidden}
+.client-brief::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--amber)}
+.cb-label{font-size:9px;letter-spacing:.18em;color:var(--amber);margin-bottom:.85rem}
+.cb-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.5rem 2rem}
+.cb-row{display:flex;flex-direction:column;gap:.15rem}
+.cb-key{font-size:9px;color:var(--text-m);letter-spacing:.1em}
+.cb-val{font-size:11px;color:var(--text-2)}
+.cb-context{margin-top:1rem;padding-top:1rem;border-top:1px solid rgba(255,214,0,.1);font-size:11px;color:var(--text-2);line-height:1.9}
+.section{margin-bottom:3.5rem}
+.sh{display:flex;align-items:center;gap:1rem;margin-bottom:1.75rem;color:var(--text-2);font-size:12px;letter-spacing:.1em}
+.sh::before{content:'$';color:var(--green);font-size:14px;font-weight:700}
+.sh::after{content:'';flex:1;height:1px;background:var(--border)}
+.obj-list{display:flex;flex-direction:column;gap:.6rem}
+.obj-item{display:flex;align-items:flex-start;gap:.75rem;background:var(--bg-card);border:1px solid var(--border);border-radius:3px;padding:.85rem 1.1rem;font-size:12px;color:var(--text-2);transition:border-color .2s}
+.obj-item:hover{border-color:var(--border-s)}
+.obj-num{color:var(--text-m);flex-shrink:0;min-width:22px}
+.tools-table{width:100%;border-collapse:collapse;font-size:12px}
+.tools-table th{text-align:left;padding:.6rem 1rem;color:var(--text-m);font-weight:400;font-size:10px;letter-spacing:.1em;border-bottom:1px solid var(--border)}
+.tools-table td{padding:.7rem 1rem;border-bottom:1px solid var(--border);color:var(--text-2)}
+.tools-table tr:last-child td{border-bottom:none}
+.tools-table tr:hover td{color:var(--text)}
+.tool-name{color:var(--green);font-weight:500}
+.tags-wrap{display:flex;flex-wrap:wrap;gap:.4rem}
+.tag{display:inline-block;padding:3px 10px;font-size:10px;border-radius:2px;letter-spacing:.04em;background:rgba(0,229,255,.05);color:var(--cyan-d);border:1px solid rgba(0,229,255,.14)}
+.topo-wrap{background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:1.5rem;overflow-x:auto}
+.topo-diagram{font-size:11px;color:var(--green-d);line-height:2.1;white-space:pre;font-family:var(--font);margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border)}
+.topo-table{width:100%;border-collapse:collapse;font-size:11px}
+.topo-table th{text-align:left;padding:.5rem .85rem;color:var(--text-m);font-weight:400;font-size:10px;letter-spacing:.1em;border-bottom:1px solid var(--border)}
+.topo-table td{padding:.6rem .85rem;border-bottom:1px solid var(--border);color:var(--text-2)}
+.topo-table tr:last-child td{border-bottom:none}
+.topo-hl{color:var(--green) !important;font-weight:500}
+.topo-ip{color:var(--cyan-d) !important}
+.topo-zone{color:var(--amber) !important;font-size:9px;letter-spacing:.1em}
+.parts-list{display:flex;flex-direction:column;gap:2rem}
+.part{background:var(--bg-card);border:1px solid var(--border);border-radius:4px;overflow:hidden;transition:border-color .2s}
+.part:hover{border-color:var(--border-s)}
+.part-header{padding:1rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem}
+.part-left{display:flex;align-items:center;gap:.75rem}
+.part-id{font-size:9px;color:var(--text-m);letter-spacing:.15em}
+.part-module{font-size:9px;color:var(--cyan-d);letter-spacing:.08em}
+.part-title{font-size:12px;font-weight:700;color:var(--cyan)}
+.part-type{font-size:9px;letter-spacing:.1em;padding:2px 8px;border-radius:2px}
+.part-type.documentation{background:rgba(0,229,255,.06);color:var(--cyan-d);border:1px solid rgba(0,229,255,.15)}
+.part-type.packet-tracer{background:var(--green-dk);color:var(--green-d);border:1px solid rgba(0,255,65,.2)}
+.part-body{padding:1.25rem}
+.part-desc{font-size:12px;color:var(--text-2);line-height:2;margin-bottom:1rem;white-space:pre-line}
+.part-code{background:var(--bg-code);border:1px solid rgba(0,255,65,.07);border-radius:3px;padding:1rem 1.25rem;font-size:11px;color:var(--green-d);overflow-x:auto;white-space:pre;line-height:1.8}
+.results-list{display:flex;flex-direction:column;gap:.6rem}
+.result{display:flex;align-items:flex-start;gap:.85rem;padding:.9rem 1.1rem;border-radius:3px;border:1px solid;font-size:12px;line-height:1.8}
+.result.success{background:rgba(0,255,65,.04);border-color:rgba(0,255,65,.12);color:var(--text-2)}
+.result.success .ri{color:var(--green);flex-shrink:0}
+.result.warning{background:rgba(255,214,0,.04);border-color:rgba(255,214,0,.12);color:var(--text-2)}
+.result.warning .ri{color:var(--amber);flex-shrink:0}
+.result.fix{background:rgba(0,229,255,.04);border-color:rgba(0,229,255,.12);color:var(--text-2)}
+.result.fix .ri{color:var(--cyan);flex-shrink:0}
+.result.fail{background:rgba(255,68,68,.04);border-color:rgba(255,68,68,.12);color:var(--text-2)}
+.result.fail .ri{color:var(--red);flex-shrink:0}
+.lessons-list{display:flex;flex-direction:column;gap:1rem}
+.lesson{background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:1.25rem;transition:border-color .2s}
+.lesson:hover{border-color:var(--border-s)}
+.lesson-n{font-size:9px;color:var(--text-m);letter-spacing:.15em;margin-bottom:.35rem}
+.lesson-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:.4rem}
+.lesson-text{font-size:12px;color:var(--text-2);line-height:1.9}
+.screenshot-placeholder{background:var(--bg-card);border:1px dashed rgba(0,255,65,.15);border-radius:4px;padding:2.5rem;text-align:center;font-size:11px;color:var(--text-m);letter-spacing:.05em}
+.screenshots{display:flex;flex-direction:column;gap:1.5rem}
+.screenshot-item{display:flex;flex-direction:column;gap:.6rem}
+.screenshot-item img{width:100%;border-radius:4px;border:1px solid rgba(0,255,65,.1);display:block}
+.screenshot-caption{font-size:10px;color:var(--text-m);letter-spacing:.08em;padding-left:.25rem}
+footer{position:relative;z-index:1;text-align:center;padding:2rem;border-top:1px solid var(--border);color:var(--text-m);font-size:10px;letter-spacing:.1em}
+@media(max-width:620px){main{padding:5rem 1.25rem 3rem}nav{padding:0 1.25rem}.proj-title{font-size:1.7rem}}
+</style>
+</head>
+<body>
+
+<nav>
+  <a id="nav-back" href="#" class="nav-back">Back to Portfolio</a>
+  <span class="nav-id">NETWORK DEFENSE: VAULTFIN SERVICES</span>
+</nav>
+
+<main>
+  <header class="proj-header" id="proj-header"></header>
+
+  <div class="client-brief">
+    <div class="cb-label">CLIENT BRIEF</div>
+    <div class="cb-grid" id="cb-grid"></div>
+    <div class="cb-context" id="cb-context"></div>
+  </div>
+
+  <div class="section">
+    <div class="sh">cat objectives.txt</div>
+    <div class="obj-list" id="obj-list"></div>
+  </div>
+
+  <div class="section">
+    <div class="sh">cat tools.txt</div>
+    <table class="tools-table">
+      <thead><tr><th>TOOL / TECHNOLOGY</th><th>PURPOSE</th></tr></thead>
+      <tbody id="tools-body"></tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="sh">cat skills.txt</div>
+    <div class="tags-wrap" id="tags-wrap"></div>
+  </div>
+
+  <div class="section">
+    <div class="sh">cat topology.txt</div>
+    <div class="topo-wrap">
+      <pre class="topo-diagram">
+  INTERNET (untrusted / WAN)
+        |
+  [VaultFin-FW1]  G0/1 - OUTSIDE zone
+        |
+  [VaultFin-R1]   G0/0 - INSIDE zone (trunk to SW1)
+        |                   Gi0/2 - DMZ zone
+        |
+  [VaultFin-SW1]
+    |       |       |       |
+ VLAN 10  VLAN 20  VLAN 30  VLAN 99
+  STAFF   PAYMENTS   DMZ    MGMT
+.10.0/24  .20.0/24  .30.0/24  .99.0/24
+
+  [CLOUD]  - Customer portal (PaaS, TLS 1.3, AES-256 at rest)
+  [SIEM]   - 192.168.99.20  (syslog, SNMPv3, NetFlow collector)
+  [NTP]    - 192.168.99.10  (internal NTP server)</pre>
+      <table class="topo-table">
+        <thead>
+          <tr>
+            <th>DEVICE</th>
+            <th>INTERFACE</th>
+            <th>IP ADDRESS</th>
+            <th>SUBNET MASK</th>
+            <th>ZONE / VLAN</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="topo-hl">VaultFin-FW1</td><td>G0/0</td><td class="topo-ip">Connected to R1</td><td>—</td><td class="topo-zone">INSIDE</td></tr>
+          <tr><td class="topo-hl">VaultFin-FW1</td><td>G0/1</td><td class="topo-ip">WAN / ISP</td><td>—</td><td class="topo-zone">OUTSIDE</td></tr>
+          <tr><td class="topo-hl">VaultFin-R1</td><td>G0/0.30</td><td class="topo-ip">192.168.30.1</td><td>255.255.255.0</td><td class="topo-zone">DMZ</td></tr>
+          <tr><td class="topo-hl">VaultFin-R1</td><td>G0/0.10</td><td class="topo-ip">192.168.10.1</td><td>255.255.255.0</td><td class="topo-zone">VLAN 10 — STAFF</td></tr>
+          <tr><td class="topo-hl">VaultFin-R1</td><td>G0/0.20</td><td class="topo-ip">192.168.20.1</td><td>255.255.255.0</td><td class="topo-zone">VLAN 20 — PAYMENTS</td></tr>
+          <tr><td class="topo-hl">VaultFin-R1</td><td>G0/0.99</td><td class="topo-ip">192.168.99.1</td><td>255.255.255.0</td><td class="topo-zone">VLAN 99 — MGMT</td></tr>
+          <tr><td class="topo-hl">VaultFin-SW1</td><td>Trunk</td><td>—</td><td>—</td><td class="topo-zone">VLANs 10, 20, 99</td></tr>
+          <tr><td class="topo-hl">DMZ Web Server</td><td>NIC</td><td class="topo-ip">192.168.30.10</td><td>255.255.255.0</td><td class="topo-zone">VLAN 30 — DMZ</td></tr>
+          <tr><td class="topo-hl">DMZ Email Relay</td><td>NIC</td><td class="topo-ip">192.168.30.20</td><td>255.255.255.0</td><td class="topo-zone">VLAN 30 — DMZ</td></tr>
+          <tr><td class="topo-hl">SIEM Server</td><td>NIC</td><td class="topo-ip">192.168.99.20</td><td>255.255.255.0</td><td class="topo-zone">VLAN 99 — MGMT</td></tr>
+          <tr><td class="topo-hl">NTP Server</td><td>NIC</td><td class="topo-ip">192.168.99.10</td><td>255.255.255.0</td><td class="topo-zone">VLAN 99 — MGMT</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="sh">cat methodology.txt</div>
+    <div class="parts-list" id="parts-list"></div>
+  </div>
+
+  <div class="section">
+    <div class="sh">cat results.txt</div>
+    <div class="results-list" id="results-list"></div>
+  </div>
+
+  <div class="section">
+    <div class="sh">ls ./evidence/</div>
+    <div class="screenshots">
+      <div class="screenshot-item">
+        <img src="topology.png" alt="Network Topology">
+        <div class="screenshot-caption">VaultFi Services Network Topology In Packet Tracer</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="sh">cat lessons_learned.txt</div>
+    <div class="lessons-list" id="lessons-list"></div>
+  </div>
+</main>
+
+<footer id="footer"></footer>
+
+<script>
+var sl = { soon:'COMING SOON', wip:'IN PROGRESS', live:'LIVE' };
+var ri = { success:'checkmark', warning:'warning', fix:'fix', fail:'fail' };
+var riChar = { success:'V', warning:'!', fix:'+', fail:'X' };
+
+if(PROJECT.portfolioLink) document.getElementById('nav-back').href = PROJECT.portfolioLink;
+
+var gh  = PROJECT.githubLink    ? '<a href="' + PROJECT.githubLink + '" target="_blank" class="btn btn-p">View on GitHub</a>' : '';
+var pfl = PROJECT.portfolioLink ? '<a href="' + PROJECT.portfolioLink + '" class="btn btn-s">Portfolio</a>' : '';
+var actions = (gh || pfl) ? '<div class="proj-actions">' + gh + pfl + '</div>' : '';
+
+document.getElementById('proj-header').innerHTML =
+  '<div class="proj-meta">' +
+  '<span class="meta-cat">CYBERSECURITY</span>' +
+  '<span class="meta-status ' + PROJECT.status + '">' + (sl[PROJECT.status] || PROJECT.status.toUpperCase()) + '</span>' +
+  '<span class="meta-source">CISCO NETWORK DEFENSE -- JUNIOR CYBERSECURITY ANALYST PATH</span>' +
+  '<span class="meta-date">' + PROJECT.date + ' -- by ' + PROJECT.author + '</span>' +
+  '</div>' +
+  '<h1 class="proj-title">' + PROJECT.title + '</h1>' +
+  '<p class="proj-overview">' + PROJECT.overview + '</p>' +
+  actions;
+
+var cbg = document.getElementById('cb-grid');
+var fields = [
+  { key: 'CLIENT', val: PROJECT.client.name },
+  { key: 'INDUSTRY', val: PROJECT.client.industry },
+  { key: 'SIZE', val: PROJECT.client.size },
+  { key: 'ENGAGEMENT', val: PROJECT.client.task }
+];
+fields.forEach(function(f) {
+  cbg.innerHTML += '<div class="cb-row"><span class="cb-key">' + f.key + '</span><span class="cb-val">' + f.val + '</span></div>';
+});
+document.getElementById('cb-context').textContent = PROJECT.client.context;
+
+var ol = document.getElementById('obj-list');
+PROJECT.objectives.forEach(function(o, i) {
+  ol.innerHTML += '<div class="obj-item"><span class="obj-num">' + String(i+1).padStart(2,'0') + '.</span><span>' + o + '</span></div>';
+});
+
+var tb = document.getElementById('tools-body');
+PROJECT.tools.forEach(function(t) {
+  tb.innerHTML += '<tr><td class="tool-name">' + t.name + '</td><td>' + t.purpose + '</td></tr>';
+});
+
+var tw = document.getElementById('tags-wrap');
+PROJECT.skills.forEach(function(s) {
+  tw.innerHTML += '<span class="tag">' + s + '</span>';
+});
+
+var pl = document.getElementById('parts-list');
+PROJECT.parts.forEach(function(p, i) {
+  var typeLabel = p.type === 'packet-tracer' ? 'PACKET TRACER' : 'DOCUMENTATION';
+  var codeBlock = p.code ? '<pre class="part-code">' + p.code + '</pre>' : '';
+  pl.innerHTML +=
+    '<div class="part">' +
+    '<div class="part-header">' +
+    '<div class="part-left">' +
+    '<span class="part-id">' + p.id + '</span>' +
+    '<span class="part-module">' + p.module + '</span>' +
+    '</div>' +
+    '<span class="part-type ' + p.type + '">' + typeLabel + '</span>' +
+    '</div>' +
+    '<div class="part-body">' +
+    '<div class="part-title" style="margin-bottom:.85rem">' + p.title + '</div>' +
+    '<div class="part-desc">' + p.desc + '</div>' +
+    codeBlock +
+    '</div>' +
+    '</div>';
+});
+
+var rl = document.getElementById('results-list');
+PROJECT.results.forEach(function(r) {
+  var icon = r.type === 'success' ? 'V' : r.type === 'warning' ? '!' : r.type === 'fix' ? '+' : 'X';
+  rl.innerHTML += '<div class="result ' + r.type + '"><span class="ri">' + icon + '</span><span>' + r.text + '</span></div>';
+});
+
+var ll = document.getElementById('lessons-list');
+PROJECT.lessons.forEach(function(l, i) {
+  ll.innerHTML +=
+    '<div class="lesson">' +
+    '<div class="lesson-n">LESSON ' + String(i+1).padStart(2,'0') + '</div>' +
+    '<div class="lesson-title">' + l.title + '</div>' +
+    '<div class="lesson-text">' + l.text + '</div>' +
+    '</div>';
+});
+
+var lnk = PROJECT.authorLinkedIn
+  ? '<a href="' + PROJECT.authorLinkedIn + '" style="color:var(--green-d);text-decoration:none">' + PROJECT.author + '</a>'
+  : PROJECT.author;
+document.getElementById('footer').innerHTML =
+  '<p>' + lnk + ' &nbsp;--&nbsp; CYBERSECURITY PROJECT &nbsp;--&nbsp; CISCO NETWORK DEFENSE &nbsp;--&nbsp; <span style="color:var(--green)">' + (sl[PROJECT.status] || PROJECT.status.toUpperCase()) + '</span></p>';
+</script>
+</body>
+</html>
